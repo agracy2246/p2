@@ -1,4 +1,4 @@
-#ifdef _WIN32 || _WIN64
+#ifdef _WIN32
 #define OS 0
 
 #elif __linux__ 
