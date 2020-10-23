@@ -1,3 +1,16 @@
+#ifdef _WIN32 || _WIN64
+#define OS 0
+
+#elif __linux__ 
+#define OS 1
+
+#endif
+
 int main() {
-	puts("hey");
+	if (OS == 1) {
+		puts("We are on linux");
+	}
+	else {
+		puts("We are on windows");
+	}
 }
