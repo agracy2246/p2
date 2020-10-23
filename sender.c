@@ -5,12 +5,14 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <signal.h>
-static volatile int fd;
 
+static volatile int server_fd;
+#define USERNAME_MESSAGE_HEADER = "username-"
+#define PASSWORD_MESSAGE_HEADER = "password-"
 /* Handles user pressing Control+C */
 void intHandler(){
-    write(fd, "x", 2);
-    close(fd);
+    write(server_fd, "x", 2);
+    close(server_fd);
     exit(0);
 }
 
@@ -22,8 +24,8 @@ int main(int argc, char *argv[]) {
     }
 
     /* Create the client socket and setup a connection*/
-    fd = socket(AF_INET, SOCK_STREAM, 0);
-    if(fd < 0){
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if(server_fd < 0){
         puts("Error creating socket");
         exit(1);
     }
@@ -32,32 +34,69 @@ int main(int argc, char *argv[]) {
     addr.sin_family = AF_INET;
     inet_pton(AF_INET, argv[1], &addr.sin_addr);
     addr.sin_port = htons(atoi(argv[2]));
-    if(connect(fd, (const struct sockaddr *) &addr, sizeof addr) < 0){
+    if(connect(server_fd, (const struct sockaddr *) &addr, sizeof addr) < 0){
         puts("Error connecting..");
         exit(1);
     }
 
-    char username_buf[64];
+    char inputbuff[64];
+    char sendbuff[64];
     char recbuff[64];
 
-    /* On successful connection, prompt for a user name */
-    puts("Welcome, please enter a username:");
-
-    /* Get user name from STDIN */
-    fgets(username_buf, sizeof(username_buf), stdin);
-    size_t ln = strlen(username_buf) - 1;
-    if (username_buf[ln] == '\n')
-        username_buf[ln] = '\0';
+    
     
     do{
-        write(fd, username_buf, strlen(username_buf) + 1);
-        //read(fd, recbuff, 1);
-        fgets(username_buf, sizeof(username_buf), stdin);
-        size_t ln = strlen(username_buf) - 1;
-        if (username_buf[ln] == '\n')
-            username_buf[ln] = '\0';
+        /* On successful connection, prompt for a user name */
+        puts("Welcome, please enter a username:");
+
+        /* Get user name from STDIN */
+        fgets(inputbuff, sizeof(inputbuff), stdin);
+        size_t ln = strlen(inputbuff) - 1;
+        if (inputbuff[ln] == '\n')
+            inputbuff[ln] = '\0';
+
+        strcpy(sendbuff, "username-");
+        strcat(sendbuff, inputbuff);
+        /* Write "username-<USER INPUT>" */
+        write(server_fd, sendbuff, strlen(sendbuff) + 1);
+
+        read(server_fd, recbuff, sizeof(recbuff));
+        if(strcmp(recbuff, "ACK") == 0){
+            puts("Please enter a password:");
+            fgets(inputbuff, sizeof(inputbuff), stdin);
+            size_t ln = strlen(inputbuff) - 1;
+            if (inputbuff[ln] == '\n')
+                inputbuff[ln] = '\0';
+            strcpy(sendbuff, "password-");
+            strcat(sendbuff, inputbuff);
+
+            /* Write "password-<USER INPUT>" */
+            write(server_fd, sendbuff, strlen(sendbuff) +1);
+            
+            /* Check what the server replied */
+            read(server_fd, recbuff, sizeof(recbuff));
+            /* If username and password match, proceed to final loop (sending strings to receiver) */
+            if(strcmp(recbuff,"good_auth") == 0){
+                puts("User authenticated, entering ham loop");
+                goto hamming_loop;
+
+            }else{
+                puts("User could not be authenticated. Try Again.");
+            }
+
+        }
+        else{
+            puts("The server could not acknowledge your request. Try again.");
+            continue;
+        }
 
     }while(1);
+
+    hamming_loop:
+    while(1){
+        write(server_fd, "ham", 4);
+        read(server_fd, recbuff, sizeof(recbuff));
+    }
     puts("closing socket");
-    close(fd);
+    close(server_fd);
 }

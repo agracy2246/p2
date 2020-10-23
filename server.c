@@ -13,50 +13,77 @@ int validatePassword(char buf[], const char *passwords[], int *parallelIndex);
 
 int main(int argc, char *argv[]) {
 
-    /*
-        These three arrays are parallel, i.e. curr_names[2] corresponds to
-        passwords[2], as well as values[2] and so on.
+    /* Will hold the username and password retrieved by the client
+        index 0 is username, index 1 is the password
     */
+    char *user_and_pass[2];
     
 
     // Creating and binding the server socket called fd
-    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof addr);
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     addr.sin_port = htons(atoi(argv[1]));
     
-    if(bind(fd, (const struct sockaddr *) &addr, sizeof addr) < 0)
+    if(bind(server_fd, (const struct sockaddr *) &addr, sizeof addr) < 0)
         return -1;
     
-    if(listen(fd, 5) < 0)
+    if(listen(server_fd, 5) < 0)
         return -1;
 
     while(1){
         struct sockaddr_in cl_addr;
         socklen_t cl_addr_len = sizeof cl_addr;
-
-        int cl_fd = accept(fd, (struct sockaddr *) &cl_addr, &cl_addr_len);
+        puts("Waiting for client to connect\n");
+        int cl_fd = accept(server_fd, (struct sockaddr *) &cl_addr, &cl_addr_len);
         if (cl_fd < 0)
             continue;
 
         puts("\nNew client connected. Waiting to read data from client...\n");
         while(1) {
-            int count;
             char buf[64];
-            while ((count = read(cl_fd, buf, sizeof buf)) > 0) {
-                if(strcmp(buf, "x") == 0){
-                    goto bbreak;
-                }
-                printf("Client wrote: %s\n\n", buf);
-                
+            read(cl_fd, buf, sizeof buf);
+            if(strcmp(buf, "x") == 0){
+                goto bbreak;
+            }
+
+            /* Split message in two parts: first is the type of message, second is the message data */
+            int i = 0;
+            char *p = strtok (buf, "-");
+            char *split_message[2];
+
+            while (p != NULL)
+            {
+                split_message[i++] = p;
+                p = strtok (NULL, "-");
+            }
+            printf("Client wrote: Type =%s Data=%s\n\n", split_message[0],split_message[1]);
+
+            /* 
+                Decide what to do with the message from the user 
+            */
+
+           /* Client sent a user name */
+            if(strcmp(split_message[0], "username") == 0){
+                user_and_pass[0] = split_message[1];
+                printf("Stored %s as the username\n", user_and_pass[0]);
+                write(cl_fd, "ACK", 4);
+                puts("Sent ACK message to the client.");
+            }
+            /* Client sent a password */
+            if(strcmp(split_message[0], "password") == 0){
+                user_and_pass[1] = split_message[1];
+                printf("Stored %s as the password\n", user_and_pass[1]);
+                write(cl_fd, "good_auth", 10);
             }
 
         }
         bbreak:
         /* Server closes the client socket after its done */
         close(cl_fd);
+        puts("Client disconnected\n");
     }
 
 }
