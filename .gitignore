@@ -15,6 +15,9 @@
 
 # Mono auto generated files
 mono_crash.*
+*.sln
+*.vcxproj
+*.vcxproj.*
 
 # Build results
 [Dd]ebug/
