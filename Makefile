@@ -12,6 +12,11 @@ rs:
 
 rx:
 	gcc -o rx.out receiver.c
+rrx:
+	./rx.out 5001
+
+hd:
+	gcc -o hd.out hd.c
 	
 all: tx s rx
 

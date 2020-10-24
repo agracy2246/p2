@@ -20,24 +20,24 @@ int main(int argc, char *argv[]) {
     
 
     // Creating and binding the server socket called fd
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    int relay_fd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof addr);
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     addr.sin_port = htons(atoi(argv[1]));
     
-    if(bind(server_fd, (const struct sockaddr *) &addr, sizeof addr) < 0)
+    if(bind(relay_fd, (const struct sockaddr *) &addr, sizeof addr) < 0)
         return -1;
     
-    if(listen(server_fd, 5) < 0)
+    if(listen(relay_fd, 5) < 0)
         return -1;
 
     while(1){
         struct sockaddr_in cl_addr;
         socklen_t cl_addr_len = sizeof cl_addr;
         puts("Waiting for client to connect\n");
-        int cl_fd = accept(server_fd, (struct sockaddr *) &cl_addr, &cl_addr_len);
+        int cl_fd = accept(relay_fd, (struct sockaddr *) &cl_addr, &cl_addr_len);
         if (cl_fd < 0)
             continue;
 

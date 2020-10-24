@@ -6,31 +6,44 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#define NUMBER_OF_STRINGS 6
-
-/*FUNCTION PROTOTYPES*/
-int validateCurrency(char buf[], const char *curr_names[], int *parallelIndex);
-int validatePassword(char buf[], const char *passwords[], int *parallelIndex);
 
 int main(int argc, char *argv[]) {
 
+    // Creating and binding the server socket called fd
+    int rx_fd = socket(AF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof addr);
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port = htons(atoi(argv[1]));
     
+    if(bind(rx_fd, (const struct sockaddr *) &addr, sizeof addr) < 0)
+        return -1;
+    
+    if(listen(rx_fd, 5) < 0)
+        return -1;
 
-}
-/* Searches for the currency in the array, stores the index */
-int validateCurrency(char buf[], const char* curr_names[], int *parallelIndex){
-    for(int i = 0; i < 6; i++){
-        if(strcmp(curr_names[i], buf) == 0){
-            *parallelIndex = i;
-            return 1;
+    while(1){
+        struct sockaddr_in cl_addr;
+        socklen_t cl_addr_len = sizeof cl_addr;
+        puts("Waiting for relay to connect\n");
+        int relay_fd = accept(rx_fd, (struct sockaddr *) &cl_addr, &cl_addr_len);
+        if (relay_fd < 0)
+            continue;
+
+        puts("\nRelay connected. Waiting to read data from relay...\n");
+        while(1) {
+            char buf[64];
+            read(relay_fd, buf, sizeof buf);
+            
+            printf("Relay wrote: %s\n", buf);
+
+
         }
+        bbreak:
+        /* Server closes the client socket after its done */
+        close(relay_fd);
+        puts("Client disconnected\n");
     }
-    return 0;
-}
-/* Checks the password given by the client against the one at the parallelIndex */
-int validatePassword(char buf[], const char *passwords[], int *parallelIndex){
-    if(strcmp(passwords[*parallelIndex], buf) == 0){
-        return 1;
-    }
-    return 0;
+
 }
