@@ -8,17 +8,34 @@
 #include <arpa/inet.h>
 
 /*FUNCTION PROTOTYPES*/
-int validateCurrency(char buf[], const char *curr_names[], int *parallelIndex);
-int validatePassword(char buf[], const char *passwords[], int *parallelIndex);
+int validateUsername(char *user_and_pass, char *user_list[]);
+int validatePassword(char *user_and_pass, char *password_list[], int parallelIndex);
 
 int main(int argc, char *argv[]) {
+
+    char *user_list[6] = {
+        "Anna",
+        "Louis",
+        "Cathie",
+        "Ken",
+        "Same",
+        "Bailey"
+    };
+    char *password_list[6] = {
+        "a86H6T0c",
+        "G6M7p8az",
+        "Pd82bG57",
+        "jO79bNs1",
+        "Cfw61RqV",
+        "Kuz07YLv"
+    
+    };
 
     /* Will hold the username and password retrieved by the client
         index 0 is username, index 1 is the password
     */
-    char *user_and_pass[2];
+    char user_and_pass[2][20];
     
-
     // Creating and binding the server socket called fd
     int relay_fd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in addr;
@@ -45,7 +62,7 @@ int main(int argc, char *argv[]) {
         while(1) {
             char buf[64];
             read(cl_fd, buf, sizeof buf);
-            if(strcmp(buf, "x") == 0){
+            if(strcmp(buf, "x") == 0 || strcmp(buf,"q") == 0){
                 goto bbreak;
             }
 
@@ -53,13 +70,13 @@ int main(int argc, char *argv[]) {
             int i = 0;
             char *p = strtok (buf, "-");
             char *split_message[2];
-
+            memset(split_message, sizeof(split_message), sizeof split_message);
             while (p != NULL)
             {
                 split_message[i++] = p;
                 p = strtok (NULL, "-");
             }
-            printf("Client wrote: Type =%s Data=%s\n\n", split_message[0],split_message[1]);
+            printf("Client wrote: Type=%s Data=%s\n", split_message[0],split_message[1]);
 
             /* 
                 Decide what to do with the message from the user 
@@ -67,17 +84,32 @@ int main(int argc, char *argv[]) {
 
            /* Client sent a user name */
             if(strcmp(split_message[0], "username") == 0){
-                user_and_pass[0] = split_message[1];
-                printf("Stored %s as the username\n", user_and_pass[0]);
+                strcpy(user_and_pass[0], split_message[1]);
+                printf("Split: %s\n", split_message[1]);
+                printf("[Server] Stored %s as the username\n", user_and_pass[0]);
                 write(cl_fd, "ACK", 4);
-                puts("Sent ACK message to the client.");
+                puts("[Server] Sent ACK message to the client.");
             }
             /* Client sent a password */
             if(strcmp(split_message[0], "password") == 0){
-                user_and_pass[1] = split_message[1];
-                printf("Stored %s as the password\n", user_and_pass[1]);
-                write(cl_fd, "good_auth", 10);
+                strcpy(user_and_pass[1], split_message[1]);
+                printf("Client sent a password. Current values: user_and_pass[0]: %s, user_and_pass[1]: %s\n", user_and_pass[0], user_and_pass[1]);
+                printf("Split: %s\n", split_message[1]);
+                printf("[Server] Stored %s as the password\n", user_and_pass[1]);
+                printf("[DEBUG] Before validation -- User=%s and Password=%s\n", user_and_pass[0], user_and_pass[1]);
+                if(validatePassword(user_and_pass[1], password_list, validateUsername(user_and_pass[0],user_list))){
+                    printf("[Server] %s validated with password \"%s\"\n", user_and_pass[0], user_and_pass[1]);
+                    write(cl_fd, "good_auth", 10);
+                }
+                else{
+                    puts("Bad password");
+                    write(cl_fd, "bad_auth",9);
+                }
+                
+
             }
+
+            /* Client send a message to be relayed to the receiver */
 
         }
         bbreak:
@@ -87,20 +119,29 @@ int main(int argc, char *argv[]) {
     }
 
 }
-/* Searches for the currency in the array, stores the index */
-int validateCurrency(char buf[], const char* curr_names[], int *parallelIndex){
+/* Searches for the name in the array, stores the index or returns -1 if not found*/
+int validateUsername(char *user_and_pass, char *user_list[]){
+    printf("[DEBUG] username: %s\n",user_and_pass);
     for(int i = 0; i < 6; i++){
-        if(strcmp(curr_names[i], buf) == 0){
-            *parallelIndex = i;
-            return 1;
+        if(strcmp(user_list[i], user_and_pass) == 0){
+            printf("[Server] User \"%s\" found in the list...\n", user_and_pass);
+            return i;
         }
     }
-    return 0;
+    printf("[Server] User \"%s\" not found in the list...\n", user_and_pass);
+    return -1;
 }
 /* Checks the password given by the client against the one at the parallelIndex */
-int validatePassword(char buf[], const char *passwords[], int *parallelIndex){
-    if(strcmp(passwords[*parallelIndex], buf) == 0){
+int validatePassword(char *user_and_pass, char *password_list[], int parallelIndex){
+    /* if parallelIndex < 0 then the username doesn't exist */
+    if(parallelIndex < 0)
+        return 0;
+
+    if(strcmp(password_list[parallelIndex], user_and_pass) == 0){
         return 1;
     }
-    return 0;
+    else {
+        return 0;
+    }
+    
 }

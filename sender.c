@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 
     hamming_loop:
     while(1){
-        write(relay_fd, "ham", 4);
+        write(relay_fd, "ham-boom", 4);
         read(relay_fd, recbuff, sizeof(recbuff));
     }
     puts("closing socket");
