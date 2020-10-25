@@ -6,13 +6,17 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <signal.h>
 
 /*FUNCTION PROTOTYPES*/
 int validateUsername(char *user_and_pass, char *user_list[]);
 int validatePassword(char *user_and_pass, char *password_list[], int parallelIndex);
+void intHandler();
+
+static volatile int receiver_fd;
 
 int main(int argc, char *argv[]) {
-
+    signal(SIGINT, intHandler);
     char *user_list[6] = {
         "Anna",
         "Louis",
@@ -35,8 +39,24 @@ int main(int argc, char *argv[]) {
         index 0 is username, index 1 is the password
     */
     char user_and_pass[2][20];
+
+    /* Create the receiver socket and setup a connection*/
+    receiver_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if(receiver_fd < 0){
+        puts("Error creating socket");
+        exit(1);
+    }
+    struct sockaddr_in rx_addr;
+    memset(&rx_addr, 0, sizeof rx_addr);
+    rx_addr.sin_family = AF_INET;
+    inet_pton(AF_INET, "127.0.0.1", &rx_addr.sin_addr);
+    rx_addr.sin_port = htons(atoi(argv[1]) + 1);
+    if(connect(receiver_fd, (const struct sockaddr *) &rx_addr, sizeof rx_addr) < 0){
+        puts("Error connecting..");
+        exit(1);
+    }
     
-    // Creating and binding the server socket called fd
+    // Creating and binding the server socket called relay_fd
     int relay_fd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof addr);
@@ -61,6 +81,10 @@ int main(int argc, char *argv[]) {
         puts("\nNew client connected. Waiting to read data from client...\n");
         while(1) {
             char buf[64];
+
+            read(receiver_fd, buf, sizeof buf);
+            if(strcmp(buf, "NULL") != 0)
+                puts("write to client");
             read(cl_fd, buf, sizeof buf);
             if(strcmp(buf, "x") == 0 || strcmp(buf,"q") == 0){
                 goto bbreak;
@@ -76,7 +100,7 @@ int main(int argc, char *argv[]) {
                 split_message[i++] = p;
                 p = strtok (NULL, "-");
             }
-            printf("Client wrote: Type=%s Data=%s\n", split_message[0],split_message[1]);
+            printf("[Server] Client wrote: Type=%s Data=%s\n", split_message[0],split_message[1]);
 
             /* 
                 Decide what to do with the message from the user 
@@ -85,7 +109,6 @@ int main(int argc, char *argv[]) {
            /* Client sent a user name */
             if(strcmp(split_message[0], "username") == 0){
                 strcpy(user_and_pass[0], split_message[1]);
-                printf("Split: %s\n", split_message[1]);
                 printf("[Server] Stored %s as the username\n", user_and_pass[0]);
                 write(cl_fd, "ACK", 4);
                 puts("[Server] Sent ACK message to the client.");
@@ -93,16 +116,13 @@ int main(int argc, char *argv[]) {
             /* Client sent a password */
             if(strcmp(split_message[0], "password") == 0){
                 strcpy(user_and_pass[1], split_message[1]);
-                printf("Client sent a password. Current values: user_and_pass[0]: %s, user_and_pass[1]: %s\n", user_and_pass[0], user_and_pass[1]);
-                printf("Split: %s\n", split_message[1]);
                 printf("[Server] Stored %s as the password\n", user_and_pass[1]);
-                printf("[DEBUG] Before validation -- User=%s and Password=%s\n", user_and_pass[0], user_and_pass[1]);
                 if(validatePassword(user_and_pass[1], password_list, validateUsername(user_and_pass[0],user_list))){
                     printf("[Server] %s validated with password \"%s\"\n", user_and_pass[0], user_and_pass[1]);
                     write(cl_fd, "good_auth", 10);
                 }
                 else{
-                    puts("Bad password");
+                    puts("[Server] Bad password...");
                     write(cl_fd, "bad_auth",9);
                 }
                 
@@ -110,18 +130,19 @@ int main(int argc, char *argv[]) {
             }
 
             /* Client send a message to be relayed to the receiver */
-
+            if(strcmp(split_message[0], "relay") == 0){
+                write(receiver_fd, split_message[1], strlen(split_message[1])+ 1);
+            }
         }
         bbreak:
         /* Server closes the client socket after its done */
         close(cl_fd);
-        puts("Client disconnected\n");
+        puts("[Server] Client disconnected\n");
     }
 
 }
 /* Searches for the name in the array, stores the index or returns -1 if not found*/
 int validateUsername(char *user_and_pass, char *user_list[]){
-    printf("[DEBUG] username: %s\n",user_and_pass);
     for(int i = 0; i < 6; i++){
         if(strcmp(user_list[i], user_and_pass) == 0){
             printf("[Server] User \"%s\" found in the list...\n", user_and_pass);
@@ -144,4 +165,11 @@ int validatePassword(char *user_and_pass, char *password_list[], int parallelInd
         return 0;
     }
     
+}
+
+/* Handles user pressing Control+C on the server */
+void intHandler(){
+    write(receiver_fd, "x", 2);
+    close(receiver_fd);
+    exit(0);
 }

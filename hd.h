@@ -1,4 +1,8 @@
 int hammingDistance(char *array[]){
+    /* Check to see if strings are of equal length */
+    if(strlen(array[0]) != strlen(array[1])){
+        return -1;
+    }
     int distance = 0;    
     
     int i = 0;

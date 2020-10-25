@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include "hd.h"
 
 int main(int argc, char *argv[]) {
 
@@ -26,24 +27,57 @@ int main(int argc, char *argv[]) {
     while(1){
         struct sockaddr_in cl_addr;
         socklen_t cl_addr_len = sizeof cl_addr;
-        puts("Waiting for relay to connect\n");
+        puts("[Receiver] Waiting for relay to connect\n");
         int relay_fd = accept(rx_fd, (struct sockaddr *) &cl_addr, &cl_addr_len);
         if (relay_fd < 0)
             continue;
 
-        puts("\nRelay connected. Waiting to read data from relay...\n");
+        puts("\n[Receiver] Relay connected. Waiting to read data from relay...\n");
+        int multiple = 0;
+        char previous[64];
+
         while(1) {
-            char buf[64];
-            read(relay_fd, buf, sizeof buf);
-            
-            printf("Relay wrote: %s\n", buf);
+            char recbuff[64];
+            char sendbuff[64];
+            read(relay_fd, recbuff, sizeof recbuff);
+            int distance = 0;
+
+            multiple++;
+            printf("[Receiver] Relay wrote: %s\n", recbuff);
+            if(multiple % 2 != 0){
+                strcpy(previous, recbuff);
+            }
+            if(multiple != 0 && multiple % 2 == 0){
+                puts("Computing hamming distance..");
+                char *hammingArray[2] = {
+                    previous,
+                    recbuff
+                };
+
+                if( (distance = hammingDistance(hammingArray)) >= 0){
+                    printf("[Receiver] Hamming distance is: %d\n", distance);
+
+                }
+                else{
+                    puts("[Receiver] Strings are not of equal length...\n");
+                }
+                sprintf(sendbuff, "%d", distance);
+
+                //Write to the relay
+                write(relay_fd, sendbuff, sizeof(sendbuff) + 1);
+            }
+
+            /* Server indicates a close */
+            if(strcmp(recbuff, "x") == 0 || strcmp(recbuff, "q") == 0){
+                goto bbreak;
+            }
 
 
         }
         bbreak:
-        /* Server closes the client socket after its done */
+        /* Receiver closes the relay socket after its done */
         close(relay_fd);
-        puts("Client disconnected\n");
+        puts("Server disconnected\n");
     }
 
 }

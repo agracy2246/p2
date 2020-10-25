@@ -94,8 +94,18 @@ int main(int argc, char *argv[]) {
 
     hamming_loop:
     while(1){
-        write(relay_fd, "ham-boom", 4);
-        read(relay_fd, recbuff, sizeof(recbuff));
+
+        /* Get user name from STDIN */
+        fgets(inputbuff, sizeof(inputbuff), stdin);
+        size_t ln = strlen(inputbuff) - 1;
+        if (inputbuff[ln] == '\n')
+            inputbuff[ln] = '\0';
+
+        strcpy(sendbuff, "relay-");
+        strcat(sendbuff, inputbuff);
+        /* Write "relay-<USER INPUT>" */
+        write(relay_fd, sendbuff, strlen(sendbuff) + 1);
+        //read(relay_fd, recbuff, sizeof(recbuff));
     }
     puts("closing socket");
     close(relay_fd);
