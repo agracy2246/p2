@@ -10,6 +10,14 @@
 
 int main(int argc, char *argv[]) {
 
+    fd_set readfds;
+    int client_socket[2];
+    //initialise all client_socket[] to 0 so not checked
+    for (int i = 0; i < 2; i++) 
+    {
+        client_socket[i] = 0;
+    }
+
     // Creating and binding the server socket called fd
     int rx_fd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in addr;
@@ -64,7 +72,7 @@ int main(int argc, char *argv[]) {
                 sprintf(sendbuff, "%d", distance);
 
                 //Write to the relay
-                write(relay_fd, sendbuff, sizeof(sendbuff) + 1);
+                write(relay_fd, sendbuff, strlen(sendbuff) + 1);
             }
 
             /* Server indicates a close */

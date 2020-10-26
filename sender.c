@@ -18,6 +18,7 @@ void intHandler(){
 
 int main(int argc, char *argv[]) {
     signal(SIGINT, intHandler);
+    int messages_sent = 0;
     if(argc < 3 || argc > 3){
         puts("USAGE: ./sender.out <IPADDR> <PORTNO>");
         exit(1);
@@ -93,9 +94,10 @@ int main(int argc, char *argv[]) {
     }while(1);
 
     hamming_loop:
+    
     while(1){
-
         /* Get user name from STDIN */
+        printf("Enter string #%d\n", messages_sent + 1);
         fgets(inputbuff, sizeof(inputbuff), stdin);
         size_t ln = strlen(inputbuff) - 1;
         if (inputbuff[ln] == '\n')
@@ -105,7 +107,20 @@ int main(int argc, char *argv[]) {
         strcat(sendbuff, inputbuff);
         /* Write "relay-<USER INPUT>" */
         write(relay_fd, sendbuff, strlen(sendbuff) + 1);
-        //read(relay_fd, recbuff, sizeof(recbuff));
+        messages_sent++;
+        if(messages_sent == 2){
+            read(relay_fd, recbuff, sizeof(recbuff));
+            
+            if(strcmp(recbuff, "-1") == 0){
+                puts("[Error] You must provide strings of equal length...");
+            }
+            else {
+                printf("Hamming distance is: %s\n", recbuff);
+            }
+            messages_sent = 0;
+        }
+    
+        
     }
     puts("closing socket");
     close(relay_fd);

@@ -17,6 +17,10 @@ static volatile int receiver_fd;
 
 int main(int argc, char *argv[]) {
     signal(SIGINT, intHandler);
+
+    int message_counter = 0;
+    char recbuff[64];
+
     char *user_list[6] = {
         "Anna",
         "Louis",
@@ -82,9 +86,6 @@ int main(int argc, char *argv[]) {
         while(1) {
             char buf[64];
 
-            read(receiver_fd, buf, sizeof buf);
-            if(strcmp(buf, "NULL") != 0)
-                puts("write to client");
             read(cl_fd, buf, sizeof buf);
             if(strcmp(buf, "x") == 0 || strcmp(buf,"q") == 0){
                 goto bbreak;
@@ -132,6 +133,14 @@ int main(int argc, char *argv[]) {
             /* Client send a message to be relayed to the receiver */
             if(strcmp(split_message[0], "relay") == 0){
                 write(receiver_fd, split_message[1], strlen(split_message[1])+ 1);
+                message_counter++;
+                if(message_counter == 2){
+                    message_counter = 0;
+                    read(receiver_fd, recbuff, sizeof(recbuff));
+                    printf("[Server] Receiver send: %s\n", recbuff);
+                    write(cl_fd, recbuff, strlen(recbuff) + 1);
+
+                }
             }
         }
         bbreak:
