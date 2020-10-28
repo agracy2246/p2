@@ -103,6 +103,11 @@ int main(int argc, char *argv[]) {
         if (inputbuff[ln] == '\n')
             inputbuff[ln] = '\0';
 
+        if(strcmp(inputbuff, "x") == 0 || strcmp(inputbuff, "q") == 0){
+            write(relay_fd, inputbuff, strlen(inputbuff)+1);
+            close(relay_fd);
+            exit(1);
+        }
         strcpy(sendbuff, "relay-");
         strcat(sendbuff, inputbuff);
         /* Write "relay-<USER INPUT>" */
