@@ -1,0 +1,6 @@
+gpel8.cs.ou.edu 129.15.78.11 1777
+gpel9.cs.ou.edu 129.15.78.12 1777
+gpel10.cs.ou.edu 129.15.78.13 1777
+gpel11.cs.ou.edu 129.15.78.14 1777
+gpel12.cs.ou.edu 129.15.78.15 1777
+gpel13.cs.ou.edu 129.15.78.16 1777
