@@ -17,6 +17,10 @@ rrx:
 
 hd:
 	gcc -o hd.out hd.c
+
+fin:
+	gcc -o fin.out fin.c
+	./fin.out
 	
 all: tx s rx
 

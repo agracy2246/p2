@@ -7,10 +7,11 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include "fin.h"
 
 /*FUNCTION PROTOTYPES*/
-int validateUsername(char *user_and_pass, char *user_list[]);
-int validatePassword(char *user_and_pass, char *password_list[], int parallelIndex);
+int validateUsername(char *user_and_pass, char user_list[][40]);
+int validatePassword(char *user_and_pass, char password_list[][40], int parallelIndex);
 void intHandler();
 
 static volatile int receiver_fd;
@@ -21,23 +22,13 @@ int main(int argc, char *argv[]) {
     int message_counter = 0;
     char recbuff[64];
 
-    char *user_list[6] = {
-        "Anna",
-        "Louis",
-        "Cathie",
-        "Ken",
-        "Same",
-        "Bailey"
-    };
-    char *password_list[6] = {
-        "a86H6T0c",
-        "G6M7p8az",
-        "Pd82bG57",
-        "jO79bNs1",
-        "Cfw61RqV",
-        "Kuz07YLv"
-    
-    };
+    char user_list[6][40];
+    char password_list[6][40];
+
+    /* Read the user names into user_list and passwords into password_list */
+    getUserInfo("userList.txt" ,user_list, password_list, 6);
+
+    /* Read the server info */
 
     /* Will hold the username and password retrieved by the client
         index 0 is username, index 1 is the password
@@ -118,7 +109,7 @@ int main(int argc, char *argv[]) {
             if(strcmp(split_message[0], "password") == 0){
                 strcpy(user_and_pass[1], split_message[1]);
                 printf("[Server] Stored %s as the password\n", user_and_pass[1]);
-                if(validatePassword(user_and_pass[1], password_list, validateUsername(user_and_pass[0],user_list))){
+                if(validatePassword(user_and_pass[1], password_list, validateUsername(user_and_pass[0], user_list))){
                     printf("[Server] %s validated with password \"%s\"\n", user_and_pass[0], user_and_pass[1]);
                     write(cl_fd, "good_auth", 10);
                 }
@@ -151,7 +142,7 @@ int main(int argc, char *argv[]) {
 
 }
 /* Searches for the name in the array, stores the index or returns -1 if not found*/
-int validateUsername(char *user_and_pass, char *user_list[]){
+int validateUsername(char *user_and_pass, char user_list[][40]){
     for(int i = 0; i < 6; i++){
         if(strcmp(user_list[i], user_and_pass) == 0){
             printf("[Server] User \"%s\" found in the list...\n", user_and_pass);
@@ -162,7 +153,7 @@ int validateUsername(char *user_and_pass, char *user_list[]){
     return -1;
 }
 /* Checks the password given by the client against the one at the parallelIndex */
-int validatePassword(char *user_and_pass, char *password_list[], int parallelIndex){
+int validatePassword(char *user_and_pass, char password_list[][40], int parallelIndex){
     /* if parallelIndex < 0 then the username doesn't exist */
     if(parallelIndex < 0)
         return 0;
