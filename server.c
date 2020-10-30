@@ -31,7 +31,6 @@ int main(int argc, char *argv[]) {
     /* Read the server info */
     struct ServerInfo server_info[6];
     getReceiverInfo("receiverList.txt", server_info);
-
     /* Will hold the username and password retrieved by the client
         index 0 is username, index 1 is the password
     */
@@ -46,7 +45,7 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in rx_addr;
     memset(&rx_addr, 0, sizeof rx_addr);
     rx_addr.sin_family = AF_INET;
-    inet_pton(AF_INET, "127.0.0.1", &rx_addr.sin_addr);
+    inet_pton(AF_INET, server_info[0].addr, &rx_addr.sin_addr);
     rx_addr.sin_port = htons(server_info[0].port);
     if(connect(receiver_fd, (const struct sockaddr *) &rx_addr, sizeof rx_addr) < 0){
         puts("Error connecting..");
